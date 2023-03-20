@@ -10,9 +10,28 @@ import logging
 import requests
 import os.path
 import openai
-
+import sys
 from dotenv import load_dotenv
 import os
+
+from pyvirtualdisplay import Display
+from picamera2 import Picamera2, Preview
+
+def capture():
+    picam2 = Picamera2()
+    camera_config = picam2.create_still_configuration()
+    picam2.configure(camera_config)
+    picam2.start()
+    # picam2.capture_file("../images/test.jpg")
+    picam2.capture_file("./sniff.jpg")
+    # picam2.start_and_capture_file("test.jpg")
+    picam2.stop()
+
+
+display = Display(visible=0, size=(800, 600))
+display.start()
+
+driver = webdriver.Chrome()
 
 load_dotenv()
 openai.api_key = os.environ["OPEN_AI_KEY"]
@@ -24,44 +43,54 @@ def describeThing(description):
     print("Going to describe what " + description + " smells like")
     whatToSmell = "Describe the smell of " + description + " in 200 characters"
 
-    print("file doesnt exist let's make a new one")
+    hashedThing = hash(description) % ((sys.maxsize + 1) * 2)
     try:
-        response = openai.ChatCompletion.create(
-          model="gpt-4",
-          messages=[{"role": "system", "content": "You are a helpful assistant describing smells for people without a sense of smell"},
-                    {"role": "user", "content": whatToSmell}]
-          )
-
-        finalResponse = response["choices"][0]["message"]["content"]
-        print(finalResponse)
-
-
-        # If using GPT 3.5
-        # response = openai.Completion.create(
-        #     engine='text-davinci-003',  # Determines the quality, speed, and cost.
-        #     temperature=0.8,            # Level of creativity in the response
-        #     prompt=whatToSmell,           # What the user typed in
-        #     max_tokens=100,             # Maximum tokens in the prompt AND response
-        #     n=1,                        # The number of completions to generate
-        # )
-        
-        # finalResponse = response["choices"][0]["text"]
-        # print(finalResponse)
-
-        # To get voice output
-
-        # try:
-            
-        #     myobj = gTTS(text=finalResponse, lang='en', slow=False)
-        #     myobj.save(description.replace(" ", "")+'.mp3')
-        #     # os.system("mpg123 " + description.replace(" ", "") + ".mp3")
-        # except:
-        #     logging.exception("Something broke at Text to Speech")
+        print("Playing audio of " + str(hashedThing) + " smells like")
+        os.system("mpg123 " + str(hashedThing) + ".mp3")
+        if os.system(os_cmd) != 0:
+            raise Exception('wrongcommand does not exist')
 
     except:
-        print("something went wrong with open AI")
+        
+        print("file doesnt exist let's make a new one")
+        try:
+            response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": "You are a helpful assistant describing smells for people without a sense of smell"},
+                        {"role": "user", "content": whatToSmell}]
+            )
+
+            finalResponse = response["choices"][0]["message"]["content"]
+            print(finalResponse)
+
+
+            # If using GPT 3.5
+            # response = openai.Completion.create(
+            #     engine='text-davinci-003',  # Determines the quality, speed, and cost.
+            #     temperature=0.8,            # Level of creativity in the response
+            #     prompt=whatToSmell,           # What the user typed in
+            #     max_tokens=100,             # Maximum tokens in the prompt AND response
+            #     n=1,                        # The number of completions to generate
+            # )
+            
+            # finalResponse = response["choices"][0]["text"]
+            # print(finalResponse)
+
+            # To get voice output
+
+            try:
+                
+                myobj = gTTS(text=finalResponse, lang='en', slow=False)
+                myobj.save(str(hashedThing)+'.mp3')
+                os.system("mpg123 " + str(hashedThing) + ".mp3")
+            except:
+                logging.exception("Something broke at Text to Speech")
+
+        except:
+            print("something went wrong with open AI")
 
 def main():
+    capture()
     for images in os.listdir(folder_dir): 
         try:
             if (images.endswith(".png") or images.endswith(".jpg") or images.endswith(".jpeg")):
@@ -86,23 +115,9 @@ def main():
                 
                 driver.get(finalurl)
 
-                # try:
-                #     found = driver.find_element(By.XPATH, "//div[@class='swmPnf']/div/div/div/div")
-                #     description = found.get_attribute('innerHTML')
-                #     if len(description) > 50:
-                #         raise ValueError('Very long, something wrong here')
-
-                #     print("Primary Guess" + description)
-                #     describeThing(description)
-                # except:
-                #     logging.exception("something broke at Primary Checking")
                 try:
                     bestGuess = driver.find_element(By.XPATH, "//div[@data-item-title]")
                     t= bestGuess.find_element(By.XPATH, (".."))
-                    # get_attribute() method to obtain class of parent
-                    # print("Parent class attribute: " + t.get_attribute("aria-label"))
-                    # bestGuess = td_p_input.find_element(By.XPATH, "//a[@tabindex=0][@role='link'][@class='GZrdsf lXbkTc']").get_attribute("aria-label")
-                    # print(bestGuess)
                     bestGuess = t.get_attribute('aria-label')
                     print("Secondary Guess " + bestGuess)
                     bestGuess = bestGuess[0:50]
@@ -112,24 +127,10 @@ def main():
 
         except Exception as e:
             print(e)
-    # whatToSmell = "Write a funny 200 character description of the actual smell of Dr Martens"
 
-    # try:
-    #     response = openai.ChatCompletion.create(
-    #         model="gpt-3.5-turbo",
-    #         messages=[{"role": "system", "content": "You are a humorous perfumist tasked with describing scents"},
-    #                 {"role": "user", "content": whatToSmell}],
-    #                 temperature=0.8
-    #         )
-    #     print(response["choices"][0]["message"]["content"])
-    #     # myobj = gTTS(text=response["choices"][0]["text"], lang='en', slow=False)
-    #     # myobj.save(description.replace(" ", "")+'.mp3')
-    #     # os.system("mpg123 " + description.replace(" ", "") + ".mp3")
 
-    # except:
-    #     print("something went wrong with open AI")
-
-main()
 # while True:
 #     # input("Press Enter to redo...")
 #     main()
+
+main()
